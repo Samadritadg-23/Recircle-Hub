@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "./api.js";
 import { useAuth } from "./auth.jsx";
 import "./App.css";
+import "./Premium.css";
 
 const FALLBACK_IMG =
   "https://images.unsplash.com/photo-14565130808-af98c75f72ce?auto=format&fit=crop&w=900&q=80";
@@ -139,7 +140,7 @@ function BrowsePage({ onOpen, user }) {
           <div className="stat-row">
             <div className="stat">
               <b>{listings.length}</b>
-              listings loaded
+              items shown
             </div>
             <div className="stat">
               <b>{available}</b>
@@ -182,6 +183,19 @@ function BrowsePage({ onOpen, user }) {
           Reset
         </button>
       </div>
+
+      <section className="section-heading" aria-label="Campus listings">
+        <div>
+          <p className="eyebrow">The campus loop</p>
+          <h2>{search.trim() || category || mode ? "Your search results" : "Find something useful"}</h2>
+          <p className="muted">
+            {search.trim() || category || mode
+              ? "Items that match your search and filters."
+              : "Pre-loved finds, everyday essentials, and useful things from your campus community."}
+          </p>
+        </div>
+        <span className="result-count">{listings.length} {listings.length === 1 ? "item" : "items"}</span>
+      </section>
 
       {error ? <div className="alert error">{error}</div> : null}
       {loading ? <div className="loading">Loading campus listings…</div> : null}
@@ -510,7 +524,7 @@ function DashboardPage({ user }) {
   if (!user) return null;
 
   return (
-    <section className="panel">
+    <section className="panel my-space-panel">
       <div className="profile-heading">
         <div className="profile-avatar" aria-hidden="true">
           {(user.name || "R").trim().charAt(0).toUpperCase()}

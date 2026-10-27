@@ -1,22 +1,22 @@
 :root {
-  /* High contrast dark theme with deep slate background & distinct surfaces */
+  /* ReCircle palette: deep forest surfaces, restrained green and warm neutral accents */
   --ink: #f4f1ea;
-  --muted: #9eb1a8;
-  --paper: #0f1715;           /* Deep dark slate background */
-  --card: #182622;            /* Distinct panel surface */
-  --card-inner: #21332e;      /* Inner card/row background for sharp contrast */
-  --card-hover: #273d37;
-  --line: #2e4740;            /* Crisp border color */
-  --line-strong: #416359;
-  --green: #2e8b60;           /* Accent green for primary actions */
-  --green-dark: #1e5c3f;
-  --mint: #1a3d31;
-  --clay: #e07a48;
-  --gold: #e5be57;
+  --muted: #a8b7ad;
+  --paper: #0e1712;
+  --card: #15231b;
+  --card-inner: #1b2d22;
+  --card-hover: #22382a;
+  --line: #2a4032;
+  --line-strong: #3b5844;
+  --green: #35865a;
+  --green-dark: #245e3e;
+  --mint: #18372a;
+  --clay: #bb7654;
+  --gold: #d9bf73;
   --danger: #e6534b;
   --ok: #34d399;
-  --shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.6);
-  --shadow-hover: 0 24px 48px -10px rgba(0, 0, 0, 0.75);
+  --shadow: 0 14px 30px -18px rgba(0, 0, 0, 0.72);
+  --shadow-hover: 0 20px 38px -20px rgba(0, 0, 0, 0.76);
   --sans: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --transition: all 0.2s ease;
 }
@@ -33,7 +33,8 @@ body {
   margin: 0;
   font-family: var(--sans);
   color: var(--ink);
-  background: var(--paper);
+  background: radial-gradient(ellipse at top, #132219 0%, var(--paper) 58%);
+  min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
