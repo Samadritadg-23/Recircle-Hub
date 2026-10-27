@@ -1,0 +1,51 @@
+:root {
+  --ink: #163226;
+  --muted: #5d6f66;
+  --paper: #f6f1e6;
+  --card: #fffdf8;
+  --line: #d9cfc0;
+  --green: #1f6b4a;
+  --green-dark: #154d36;
+  --mint: #e4f2ea;
+  --clay: #c45c26;
+  --gold: #e8b84a;
+  --danger: #b42318;
+  --ok: #157a45;
+  --shadow: 0 10px 30px rgba(22, 50, 38, 0.08);
+  --sans: "Segoe UI", system-ui, Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--sans);
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 500px at 10% -10%, #dceee3 0%, transparent 55%),
+    radial-gradient(800px 400px at 100% 0%, #f3e0c8 0%, transparent 50%),
+    var(--paper);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+a {
+  color: var(--green-dark);
+}
+
+img {
+  max-width: 100%;
+}
