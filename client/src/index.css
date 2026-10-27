@@ -1,27 +1,31 @@
 :root {
-  --ink: #163226;
-  --muted: #5d6f66;
-  --paper: #f6f1e6;
-  --card: #fffdf8;
-  --line: #d9cfc0;
-  --green: #1f6b4a;
-  --green-dark: #154d36;
-  --mint: #e4f2ea;
-  --clay: #c45c26;
-  --gold: #e8b84a;
-  --danger: #b42318;
-  --ok: #157a45;
-  --shadow: 0 10px 30px rgba(22, 50, 38, 0.08);
-  --sans: "Segoe UI", system-ui, Roboto, sans-serif;
+  /* High contrast dark theme with deep slate background & distinct surfaces */
+  --ink: #f4f1ea;
+  --muted: #9eb1a8;
+  --paper: #0f1715;           /* Deep dark slate background */
+  --card: #182622;            /* Distinct panel surface */
+  --card-inner: #21332e;      /* Inner card/row background for sharp contrast */
+  --card-hover: #273d37;
+  --line: #2e4740;            /* Crisp border color */
+  --line-strong: #416359;
+  --green: #2e8b60;           /* Accent green for primary actions */
+  --green-dark: #1e5c3f;
+  --mint: #1a3d31;
+  --clay: #e07a48;
+  --gold: #e5be57;
+  --danger: #e6534b;
+  --ok: #34d399;
+  --shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.6);
+  --shadow-hover: 0 24px 48px -10px rgba(0, 0, 0, 0.75);
+  --sans: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --transition: all 0.2s ease;
 }
 
-* {
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
-html,
-body,
-#root {
+html, body, #root {
   min-height: 100%;
 }
 
@@ -29,23 +33,27 @@ body {
   margin: 0;
   font-family: var(--sans);
   color: var(--ink);
-  background:
-    radial-gradient(1200px 500px at 10% -10%, #dceee3 0%, transparent 55%),
-    radial-gradient(800px 400px at 100% 0%, #f3e0c8 0%, transparent 50%),
-    var(--paper);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-button,
-input,
-select,
-textarea {
+button, input, select, textarea {
   font: inherit;
 }
 
 a {
-  color: var(--green-dark);
+  color: var(--gold);
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+a:hover {
+  color: #f3d687;
+  text-decoration: underline;
 }
 
 img {
   max-width: 100%;
+  display: block;
 }
