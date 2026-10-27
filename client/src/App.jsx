@@ -517,7 +517,7 @@ function DashboardPage({ user }) {
         </div>
         <div className="profile-heading-copy">
           <p className="eyebrow">Your personal space</p>
-          <h1>My Profile</h1>
+          <h1>My Space</h1>
           <p className="muted">Welcome back, {user.name?.trim().split(/\s+/)[0] || "there"}. Manage your listings, requests, and campus impact here.</p>
         </div>
       </div>
@@ -1298,7 +1298,7 @@ export default function App() {
             Wanted items
           </button>
           <button className={`nav-link ${route.name === "dashboard" ? "active" : ""}`} type="button" onClick={() => go("/dashboard")}>
-            My Profile
+            My Space
           </button>
           {user ? (
             <button className={`nav-link ${route.name === "notifications" ? "active" : ""}`} type="button" onClick={() => go("/notifications")} aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ""}`}>
