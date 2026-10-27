@@ -30,6 +30,13 @@ function modeLabel(mode) {
   return "Free lend";
 }
 
+function greetingForTime() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 function priceLabel(listing) {
   if (listing.mode === "lend") return "Free";
   if (listing.mode === "rent") return `₹${listing.price}/week`;
@@ -64,7 +71,7 @@ function ListingCard({ listing, onOpen }) {
         <h3>{listing.title}</h3>
         <div className="price">{priceLabel(listing)}</div>
         <p className="muted">{listing.pickupLocation}</p>
-        {listing.isSample ? <p className="sample-flag">Sample listing</p> : null}
+        
         <button className="btn small" type="button" onClick={() => onOpen(listing.id)}>
           View
         </button>
@@ -73,7 +80,7 @@ function ListingCard({ listing, onOpen }) {
   );
 }
 
-function BrowsePage({ onOpen }) {
+function BrowsePage({ onOpen, user }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [mode, setMode] = useState("");
@@ -113,15 +120,22 @@ function BrowsePage({ onOpen }) {
     <>
       <section className="hero">
         <div>
-          <p className="eyebrow">Campus reuse, not landfill</p>
-          <h1>Sell, rent, or lend what students already have.</h1>
-          <p>
-            ReCircle Hub is a student marketplace for textbooks, gadgets, hostel gear, and everyday
-            campus stuff. Keep good items circulating instead of buying everything new.
-          </p>
+          <p className="eyebrow">{user ? greetingForTime() : "Campus reuse, not landfill"}</p>
+          <h1>{user ? `Hi, ${user.name?.trim().split(/\s+/)[0] || "there"}!` : "Sell, rent, or lend what students already have."}</h1>
+          {user ? (
+            <p>
+              Good to see you, {user.name?.trim().split(/\s+/)[0] || "there"}. Find something useful,
+              pass an item on, and keep good things circulating across campus.
+            </p>
+          ) : (
+            <p>
+              ReCircle Hub is a student marketplace for textbooks, gadgets, hostel gear, and everyday
+              campus stuff. Keep good items circulating instead of buying everything new.
+            </p>
+          )}
         </div>
         <div className="hero-card">
-          <p>Browse what is already on campus, request an item, and pick it up from a hostel or classroom.</p>
+          <p>{user ? "Your campus community is full of useful things waiting for their next chapter." : "Browse what is already on campus, request an item, and pick it up from a hostel or classroom."}</p>
           <div className="stat-row">
             <div className="stat">
               <b>{listings.length}</b>
@@ -431,6 +445,22 @@ function DashboardPage({ user }) {
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
 
+  // Exclude demo/sample listings so they do not inflate a student's impact.
+  const realListings = useMemo(
+    () => listings.filter((listing) => !listing.isSample),
+    [listings]
+  );
+  const completedListings = useMemo(
+    () => realListings.filter((listing) => listing.status === "completed"),
+    [realListings]
+  );
+  const circulatingListings = useMemo(
+    () => realListings.filter((listing) => ["available", "reserved"].includes(listing.status)),
+    [realListings]
+  );
+  // Transparent gamification: 1 point per genuine listing + 4 bonus points per completed listing.
+  const impactScore = realListings.length + completedListings.length * 4;
+
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -481,8 +511,50 @@ function DashboardPage({ user }) {
 
   return (
     <section className="panel">
-      <p className="eyebrow">Your campus activity</p>
-      <h1>Dashboard</h1>
+      <div className="profile-heading">
+        <div className="profile-avatar" aria-hidden="true">
+          {(user.name || "R").trim().charAt(0).toUpperCase()}
+        </div>
+        <div className="profile-heading-copy">
+          <p className="eyebrow">Your personal space</p>
+          <h1>My Profile</h1>
+          <p className="muted">Welcome back, {user.name?.trim().split(/\s+/)[0] || "there"}. Manage your listings, requests, and campus impact here.</p>
+        </div>
+      </div>
+
+      <section className="impact-card" aria-labelledby="impact-title">
+        <div className="impact-heading">
+          <div>
+            <p className="eyebrow">Small actions, lasting impact</p>
+            <h2 id="impact-title">Your ReCircle Impact</h2>
+            <p className="muted">Every useful item you list is a chance to keep something in circulation.</p>
+          </div>
+          <div className="impact-score" aria-label={`${impactScore} reuse points`}>
+            <span>{impactScore}</span>
+            <small>reuse points</small>
+          </div>
+        </div>
+
+        <div className="impact-stats">
+          <div className="impact-stat">
+            <span className="impact-number">{realListings.length}</span>
+            <span className="impact-label">Items listed for reuse</span>
+          </div>
+          <div className="impact-stat">
+            <span className="impact-number">{completedListings.length}</span>
+            <span className="impact-label">Listings marked complete</span>
+          </div>
+          <div className="impact-stat">
+            <span className="impact-number">{circulatingListings.length}</span>
+            <span className="impact-label">Items still circulating</span>
+          </div>
+        </div>
+
+        <p className="impact-note">
+          Reuse points = 1 point per non-demo listing + 4 bonus points per listing you mark complete. Completion is not independently verified, and waste avoided is not estimated because item weights are not recorded.
+        </p>
+      </section>
+
       <div className="tabs">
         <button className={`nav-link ${tab === "listings" ? "active" : ""}`} type="button" onClick={() => setTab("listings")}>
           My listings
@@ -1217,7 +1289,7 @@ export default function App() {
         </button>
         <nav className="nav-links">
           <button className={`nav-link ${route.name === "browse" ? "active" : ""}`} type="button" onClick={() => go("/")}>
-            Browse
+            Dashboard
           </button>
           <button className={`nav-link ${route.name === "create" ? "active" : ""}`} type="button" onClick={() => go("/create")}>
             List an item
@@ -1226,7 +1298,7 @@ export default function App() {
             Wanted items
           </button>
           <button className={`nav-link ${route.name === "dashboard" ? "active" : ""}`} type="button" onClick={() => go("/dashboard")}>
-            Dashboard
+            My Profile
           </button>
           {user ? (
             <button className={`nav-link ${route.name === "notifications" ? "active" : ""}`} type="button" onClick={() => go("/notifications")} aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ""}`}>
@@ -1257,7 +1329,7 @@ export default function App() {
 
       <main className="page">
         {!ready ? <div className="loading">Starting ReCircle Hub…</div> : null}
-        {ready && route.name === "browse" ? <BrowsePage onOpen={(id) => go(`/listing/${id}`)} /> : null}
+        {ready && route.name === "browse" ? <BrowsePage user={user} onOpen={(id) => go(`/listing/${id}`)} /> : null}
         {ready && route.name === "listing" ? (
           <ListingPage id={route.id} user={user} onNeedAuth={() => go("/login")} />
         ) : null}
