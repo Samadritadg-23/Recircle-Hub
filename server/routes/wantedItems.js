@@ -2,10 +2,15 @@
 import express from "express";
 import mongoose from "mongoose";
 import WantedItem from "../models/WantedItem.js";
+import Listing from "../models/Listing.js";
 import WantedItemResponse from "../models/WantedItemResponse.js";
 import Notification from "../models/Notification.js";
 import User from "../models/User.js";
 import { requireAuth } from "../middleware/auth.js";
+import {
+  embedTexts,
+  cosineSimilarity,
+} from "../services/semanticMatcher.js";
 
 const router = express.Router();
 
@@ -73,6 +78,155 @@ router.post("/", requireAuth, async (req, res) => {
     });
   }
 });
+
+
+/**
+ * Find available listings that may match a wanted item.
+ * Only the requester can see matches for their own wanted post.
+ */
+router.get("/:id/matches", requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        error: "Invalid wanted-item ID.",
+      });
+    }
+
+    const wantedItem = await WantedItem.findById(id);
+
+    if (!wantedItem) {
+      return res.status(404).json({
+        error: "Wanted-item request not found.",
+      });
+    }
+
+    if (!wantedItem.requester.equals(req.user._id)) {
+      return res.status(403).json({
+        error: "Only the requester can view matches.",
+      });
+    }
+
+    if (wantedItem.status !== "open") {
+      return res.json({ matches: [] });
+    }
+
+    // Escape user input so it is treated as plain text in regex.
+
+    const listings = await Listing.find({
+      status: "available",
+      owner: { $ne: wantedItem.requester },
+    })
+      .populate("owner", "name hostel hidePhoneUntilAccepted")
+      .sort({ createdAt: -1 })
+      .limit(100);
+
+    if (listings.length === 0) {
+      return res.json({ matches: [] });
+    }
+
+    const wantedText = [
+      wantedItem.title,
+      wantedItem.description,
+      wantedItem.category !== "Other" ? wantedItem.category : "",
+    ]
+      .filter(Boolean)
+      .join(". ");
+
+    const listingTexts = listings.map((listing) =>
+      [
+        listing.title,
+        listing.description,
+        listing.category,
+      ]
+        .filter(Boolean)
+        .join(". ")
+    );
+
+    const vectors = await embedTexts([wantedText, ...listingTexts]);
+    const wantedVector = vectors[0];
+
+    const wantedWords = new Set(
+      wantedText.toLowerCase().match(/[a-z0-9]+/g) || []
+    );
+
+    const matches = listings
+      .map((listing, index) => {
+        const similarity = cosineSimilarity(
+          wantedVector,
+          vectors[index + 1]
+        );
+
+        const categoryMatch =
+          wantedItem.category !== "Other" &&
+          listing.category === wantedItem.category;
+
+        const listingText =
+          `${listing.title} ${listing.description}`.toLowerCase();
+
+        const matchedKeywords = [...wantedWords].filter(
+          (word) => word.length >= 3 && listingText.includes(word)
+        );
+
+        return {
+          listing,
+          similarity,
+          categoryMatch,
+          matchedKeywords,
+        };
+      })
+      .filter((item) => item.similarity >= 0.60)
+      .sort((a, b) => {
+        const scoreA = a.similarity + (a.categoryMatch ? 0.03 : 0);
+        const scoreB = b.similarity + (b.categoryMatch ? 0.03 : 0);
+        return scoreB - scoreA;
+      })
+      .slice(0, 50)
+      .map(({ listing, similarity, matchedKeywords, categoryMatch }) => ({
+        id: String(listing._id),
+        title: listing.title,
+        description: listing.description,
+        category: listing.category,
+        imageUrl: listing.imageUrl,
+        condition: listing.condition,
+        mode: listing.mode,
+        price: listing.price,
+        pickupLocation: listing.pickupLocation,
+        status: listing.status,
+        createdAt: listing.createdAt,
+        matchScore: Math.round(similarity * 100),
+        matchedKeywords,
+        categoryMatch,
+        owner: listing.owner
+          ? {
+            id: String(listing.owner._id),
+            name:
+              listing.owner.hidePhoneUntilAccepted === true
+                ? null
+                : listing.owner.name,
+            hostel:
+              listing.owner.hidePhoneUntilAccepted === true
+                ? ""
+                : listing.owner.hostel,
+            hidePhoneUntilAccepted:
+              listing.owner.hidePhoneUntilAccepted === true,
+          }
+          : null,
+      }));
+
+    return res.json({ matches });
+
+  }
+  catch (error) {
+    console.error("Find wanted-item matches error:", error.message);
+    return res.status(500).json({
+      error: "Could not find matching listings.",
+    });
+  }
+});
+
+
 
 // Browse open wanted-item requests
 router.get("/", async (_req, res) => {
@@ -248,10 +402,10 @@ router.get("/:id/responses", requireAuth, async (req, res) => {
         createdAt: response.createdAt,
         volunteer: response.volunteer
           ? {
-              name: response.volunteer.name,
-              phone: response.volunteer.phone,
-              hostel: response.volunteer.hostel,
-            }
+            name: response.volunteer.name,
+            phone: response.volunteer.phone,
+            hostel: response.volunteer.hostel,
+          }
           : null,
       })),
     });
