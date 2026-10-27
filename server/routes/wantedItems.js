@@ -42,6 +42,72 @@ router.post("/", requireAuth, async (req, res) => {
       notifyAll,
     });
 
+    // Find existing listings that may match this new wanted post.
+    try {
+      const listings = await Listing.find({
+        status: "available",
+        owner: { $ne: req.user._id },
+      })
+        .sort({ createdAt: -1 })
+        .limit(100);
+
+      if (listings.length > 0) {
+        const wantedText = [
+          wantedItem.title,
+          wantedItem.description,
+          wantedItem.category !== "Other" ? wantedItem.category : "",
+        ]
+          .filter(Boolean)
+          .join(". ");
+
+        const listingTexts = listings.map((listing) =>
+          [listing.title, listing.description, listing.category]
+            .filter(Boolean)
+            .join(". ")
+        );
+
+        const vectors = await embedTexts([wantedText, ...listingTexts]);
+        const wantedVector = vectors[0];
+
+        const matchingListings = [];
+
+        for (let i = 0; i < listings.length; i++) {
+          const listing = listings[i];
+          const similarity = cosineSimilarity(
+            wantedVector,
+            vectors[i + 1]
+          );
+
+          if (similarity >= 0.60) {
+            matchingListings.push({
+              listing,
+              similarity,
+            });
+          }
+        }
+
+        if (matchingListings.length > 0) {
+          const bestMatch = matchingListings[0].listing;
+
+          await Notification.create({
+            recipient: req.user._id,
+            actor: bestMatch.owner,
+            type: "listing_match",
+            title: "A listing may match your wanted item",
+            message: `"${bestMatch.title}" may match your request "${wantedItem.title}".`,
+            wantedItem: wantedItem._id,
+            listing: bestMatch._id,
+          });
+        }
+      }
+    } catch (matchError) {
+      console.error(
+        "Wanted-item matching failed:",
+        matchError.message
+      );
+    }
+
+
     let notifiedCount = 0;
 
     if (notifyAll) {

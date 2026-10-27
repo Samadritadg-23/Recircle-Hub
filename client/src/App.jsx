@@ -625,6 +625,9 @@ function WantedItemsPage({ user, onNeedAuth }) {
   const [myItems, setMyItems] = useState([]);
   const [responsesByItem, setResponsesByItem] = useState({});
   const [selectedItem, setSelectedItem] = useState(null);
+  const [matchesByItem, setMatchesByItem] = useState({});
+  const [matchingItemId, setMatchingItemId] = useState(null);
+  const [matchErrors, setMatchErrors] = useState({});
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -682,6 +685,41 @@ function WantedItemsPage({ user, onNeedAuth }) {
       setBusy(false);
     }
   }
+
+
+  async function findMatches(item) {
+    if (!user) {
+      onNeedAuth();
+      return;
+    }
+
+    const itemId = String(item._id);
+
+    setMatchingItemId(itemId);
+    setMatchErrors((previous) => ({
+      ...previous,
+      [itemId]: "",
+    }));
+
+    try {
+      const data = await api(
+        `/wanted-items/${itemId}/matches`
+      );
+
+      setMatchesByItem((previous) => ({
+        ...previous,
+        [itemId]: data.matches || [],
+      }));
+    } catch (err) {
+      setMatchErrors((previous) => ({
+        ...previous,
+        [itemId]: err.message || "Could not find matches.",
+      }));
+    } finally {
+      setMatchingItemId(null);
+    }
+  }
+
 
   async function respondToItem(item, shareContact) {
     if (!user) { onNeedAuth(); return; }
@@ -780,6 +818,68 @@ function WantedItemsPage({ user, onNeedAuth }) {
                 {isMine ? (
                   <>
                     <p className="muted">Your request · {item.status}</p>
+
+                    {item.status === "open" ? (
+                      <div className="matching-section">
+                        <button
+                          className="btn small ghost"
+                          type="button"
+                          disabled={matchingItemId === String(item._id)}
+                          onClick={() => findMatches(item)}
+                        >
+                          {matchingItemId === String(item._id)
+                            ? "Finding matches…"
+                            : "✨ Find Matches"}
+                        </button>
+
+                        {matchErrors[item._id] ? (
+                          <p role="alert" className="muted">
+                            {matchErrors[item._id]}
+                          </p>
+                        ) : null}
+
+                        {matchesByItem[item._id] ? (
+                          <div className="response-contacts">
+                            <strong>
+                              {matchesByItem[item._id].length
+                                ? `Found ${matchesByItem[item._id].length} potential match(es)`
+                                : "No matching listings found yet."}
+                            </strong>
+
+                            {matchesByItem[item._id].map((listing) => (
+                              <div className="request-row" key={listing.id}>
+                                <div>
+                                  <strong>{listing.title}</strong>
+                                  <p className="muted">
+                                    {listing.category} · {listing.condition}
+                                  </p>
+                                  <p>
+                                    {listing.mode === "lend"
+                                      ? "Free to borrow"
+                                      : `₹${listing.price} · ${listing.mode}`}
+                                  </p>
+                                  {listing.description ? (
+                                    <p>{listing.description}</p>
+                                  ) : null}
+                                  <p className="muted">
+                                    Match:{" "}
+                                    {listing.categoryMatch ? "Category" : ""}
+                                    {listing.categoryMatch &&
+                                      listing.matchedKeywords.length
+                                      ? " + "
+                                      : ""}
+                                    {listing.matchedKeywords.length
+                                      ? listing.matchedKeywords.join(", ")
+                                      : ""}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+
                     <div className="actions">
                       <button className="btn small ghost" type="button" onClick={() => loadResponses(item)}>
                         View volunteers

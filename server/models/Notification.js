@@ -19,6 +19,7 @@ const notificationSchema = new mongoose.Schema(
                 "wanted_item",
                 "wanted_item_fulfilled",
                 "wanted_item_response",
+                "listing_match",
             ],
             required: true,
         },
@@ -37,6 +38,11 @@ const notificationSchema = new mongoose.Schema(
         wantedItem: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "WantedItem",
+            default: null,
+        },
+        listing: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Listing",
             default: null,
         },
         isRead: {

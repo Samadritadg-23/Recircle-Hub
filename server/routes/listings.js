@@ -3,6 +3,9 @@ import Listing from "../models/Listing.js";
 import Request from "../models/Request.js";
 import { requireAuth } from "../middleware/auth.js";
 import { CATEGORIES, CONDITIONS, MODES } from "../constants.js";
+import WantedItem from "../models/WantedItem.js";
+import Notification from "../models/Notification.js";
+import { embedTexts, cosineSimilarity } from "../services/semanticMatcher.js";
 
 const router = express.Router();
 
@@ -160,6 +163,76 @@ router.post("/", requireAuth, async (req, res) => {
       pickupLocation,
       owner: req.user._id,
     });
+
+
+    // Notify owners of open wanted posts that semantically match this listing.
+    try {
+      const wantedItems = await WantedItem.find({
+        status: "open",
+        requester: { $ne: req.user._id },
+      })
+        .sort({ createdAt: -1 })
+        .limit(100);
+
+      if (wantedItems.length > 0) {
+        const listingText = [
+          listing.title,
+          listing.description,
+          listing.category,
+        ].filter(Boolean).join(". ");
+
+        const wantedTexts = wantedItems.map((item) =>
+          [
+            item.title,
+            item.description,
+            item.category !== "Other" ? item.category : "",
+          ].filter(Boolean).join(". ")
+        );
+
+        const vectors = await embedTexts([listingText, ...wantedTexts]);
+        const listingVector = vectors[0];
+
+        const notifications = [];
+
+        for (let i = 0; i < wantedItems.length; i++) {
+          const item = wantedItems[i];
+          const similarity = cosineSimilarity(listingVector, vectors[i + 1]);
+
+          const categoryMatch =
+            item.category !== "Other" && item.category === listing.category;
+
+          if (similarity < 0.60) continue;
+
+          // Prevent duplicate notifications for this listing–wanted-item pair.
+          const alreadyNotified = await Notification.exists({
+            recipient: item.requester,
+            type: "listing_match",
+            wantedItem: item._id,
+            listing: listing._id,
+          });
+
+          if (alreadyNotified) continue;
+
+          notifications.push({
+            recipient: item.requester,
+            actor: req.user._id,
+            type: "listing_match",
+            title: "A listing may match your wanted item",
+            message: `"${listing.title}" may match your request "${item.title}".`,
+            wantedItem: item._id,
+            listing: listing._id,
+          });
+        }
+
+        if (notifications.length > 0) {
+          await Notification.insertMany(notifications);
+        }
+      }
+    } catch (matchError) {
+      // Matching must not prevent a valid listing from being created.
+      console.error("Automatic listing match notifications failed:", matchError.message);
+    }
+
 
     await listing.populate("owner", "name hostel hidePhoneUntilAccepted");
     res.status(201).json({
