@@ -18,12 +18,10 @@ const app = express();
 
 app.use(
   cors({
-    origin(origin, callback) {
-      if (!origin || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error("Not allowed by CORS"));
-    },
+    origin: [
+      "https://recircle-hub-xi.vercel.app",
+      "https://recircle-8cwi4apkw-samadritadg-23.vercel.app",
+    ],
   })
 );
 app.use(express.json({ limit: "200kb" }));
